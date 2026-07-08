@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WELCOME TO OH SDI IN THE DARK</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #000;
+    font-family: 'Courier New', monospace;
+    color: #0f0;
+    min-height: 100%;
+  }
+  canvas#matrix {
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+  }
+  .scanlines {
+    position: fixed; top:0; left:0; right:0; bottom:0;
+    z-index: 1; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(0,255,0,0.04) 0px, rgba(0,255,0,0.04) 1px, transparent 2px, transparent 3px);
+    mix-blend-mode: screen;
+  }
+  .frame {
+    position: fixed;
+    top: 10px; left: 10px; right: 10px; bottom: 10px;
+    border: 2px solid #0f0;
+    box-shadow: 0 0 10px #0f0, 0 0 20px #0f0, inset 0 0 15px #0f0;
+    z-index: 2; pointer-events: none;
+    animation: borderPulse 2.5s infinite ease-in-out;
+  }
+  @keyframes borderPulse {
+    0%,100% { box-shadow: 0 0 10px #0f0, 0 0 20px #0f0, inset 0 0 15px #0f0; border-color: #0f0; }
+    50% { box-shadow: 0 0 20px #0f0, 0 0 45px #0f0, inset 0 0 30px #0f0; border-color: #6fff6f; }
+  }
+  .corner { position: fixed; width: 34px; height: 34px; border: 3px solid #0f0; z-index: 3; pointer-events:none; filter: drop-shadow(0 0 6px #0f0); }
+  .tl { top: 16px; left: 16px; border-right:none; border-bottom:none; }
+  .tr { top: 16px; right: 16px; border-left:none; border-bottom:none; }
+  .bl { bottom: 16px; left: 16px; border-right:none; border-top:none; }
+  .br { bottom: 16px; right: 16px; border-left:none; border-top:none; }
+
+  .wrap {
+    position: relative;
+    z-index: 5;
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 42px 24px 40px;
+  }
+
+  .glitch-wrap { text-align: center; margin-bottom: 4px; }
+  .glitch {
+    font-size: clamp(22px, 6vw, 40px);
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    position: relative;
+    color: #0f0;
+    text-shadow: 0 0 8px #0f0, 0 0 20px #0f0;
+    animation: flicker 4s infinite;
+  }
+  .glitch::before, .glitch::after {
+    content: 'UNDERGROUND TERMINAL OH SDI';
+    position: absolute; top:0; left:0; width:100%; overflow:hidden;
+  }
+  .glitch::before { color:#ff0044; animation: glitchTop 3s infinite linear alternate-reverse; }
+  .glitch::after { color:#00e5ff; animation: glitchBottom 2.5s infinite linear alternate-reverse; }
+  @keyframes glitchTop {
+    0% { clip-path: inset(0 0 85% 0); transform: translate(-2px,-1px);} 
+    40% { clip-path: inset(40% 0 20% 0); transform: translate(-3px,0);} 
+    100% { clip-path: inset(0 0 90% 0); transform: translate(1px,0);} 
+  }
+  @keyframes glitchBottom {
+    0% { clip-path: inset(85% 0 0 0); transform: translate(2px,1px);} 
+    40% { clip-path: inset(20% 0 50% 0); transform: translate(3px,0);} 
+    100% { clip-path: inset(90% 0 0 0); transform: translate(-1px,0);} 
+  }
+  @keyframes flicker {
+    0%,19%,21%,23%,25%,54%,56%,100% { opacity:1; }
+    20%,24%,55% { opacity:0.4; }
+  }
+  .status-line {
+    text-align:center; font-size: 12px; letter-spacing: 2px;
+    opacity: 0.8; margin-bottom: 26px; animation: blink 1.5s infinite;
+  }
+  @keyframes blink { 0%,49%{opacity:.8;} 50%,100%{opacity:.25;} }
+
+  .panel {
+    background: rgba(0,15,0,0.55);
+    border: 1px solid #0f0;
+    box-shadow: 0 0 12px rgba(0,255,0,0.35), inset 0 0 12px rgba(0,255,0,0.08);
+    border-radius: 4px;
+    padding: 16px 16px 18px;
+    margin-bottom: 16px;
+  }
+  .panel h2 {
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #0f0;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    border-bottom: 1px dashed rgba(0,255,0,0.4);
+    padding-bottom: 6px;
+  }
+  .panel h2::before { content: '> '; }
+
+  label { display:block; font-size:11px; color:#6fff6f; margin: 10px 0 4px; letter-spacing: 1px; }
+  input[type="text"], input[type="number"], select {
+    width:100%; padding:8px; background:#000; color:#0f0;
+    border:1px solid #0f0; border-radius:3px; font-family:'Courier New',monospace;
+    font-size:13px; outline:none;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus {
+    box-shadow: 0 0 8px #0f0;
+  }
+  input[type="file"] {
+    width:100%; padding:8px; background:#000; border:1px dashed #0f0;
+    border-radius:3px; color:#0f0; font-size:12px;
+  }
+  .row { display:flex; gap:8px; }
+  .row > div { flex:1; }
+
+  .quick-buttons { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .quick-buttons button {
+    flex:1; min-width:90px; padding:8px; background:#001a00; color:#0f0;
+    border:1px solid #0f0; border-radius:3px; font-size:11px; cursor:pointer;
+    font-family:'Courier New',monospace; letter-spacing:1px;
+  }
+  .quick-buttons button:hover { background:#003300; box-shadow: 0 0 8px #0f0; }
+
+  canvas#previewCanvas {
+    width:100%; border-radius:4px; background:#000; display:block;
+    margin-top:10px; border: 1px solid #0f0; box-shadow: 0 0 10px rgba(0,255,0,0.4);
+  }
+  .placeholder { text-align:center; color:#4caf50; opacity:0.6; padding:36px 10px; font-size:12px; letter-spacing:1px; }
+
+  .btn-main {
+    width:100%; padding:14px; background:#0f0; color:#000; border:none;
+    border-radius:4px; font-size:14px; font-weight:bold; cursor:pointer; margin-top:8px;
+    letter-spacing:2px; text-transform:uppercase; font-family:'Courier New',monospace;
+    box-shadow: 0 0 12px #0f0;
+  }
+  .btn-main:hover { background:#6fff6f; }
+  .btn-main:disabled { background:#333; color:#777; cursor:not-allowed; box-shadow:none; }
+
+  .hint { font-size:10px; color:#4caf50; margin-top:6px; opacity:0.8; }
+  input[type="color"] { width:100%; height:34px; border:1px solid #0f0; border-radius:3px; background:#000; padding:2px; }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+<div class="scanlines"></div>
+<div class="frame"></div>
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<div class="wrap">
+  <div class="glitch-wrap"><div class="glitch">UNDERGROUND TERMINAL OH SDI</div></div>
+  <div class="status-line" id="statusLine">&gt; SYSTEM READY // WATERMARK MODULE LOADED</div>
+
+  <div class="panel">
+    <h2>Input Foto</h2>
+    <input type="file" id="photoInput" accept="image/*">
+    <label>Logo (opsional, pojok kiri atas)</label>
+    <input type="file" id="logoInput" accept="image/*">
+  </div>
+
+  <div class="panel">
+    <h2>Badge &amp; Jam</h2>
+    <div class="row">
+      <div><label>Label Badge</label><input type="text" id="badgeLabel" value="Apel Pagi"></div>
+      <div><label>Jam</label><input type="text" id="timeInput" value="06:04"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Tanggal</h2>
+    <div class="quick-buttons">
+      <button type="button" onclick="setNow()">[ NOW ]</button>
+      <button type="button" onclick="shiftDay(-1)">[ -1 HARI ]</button>
+      <button type="button" onclick="shiftDay(1)">[ +1 HARI ]</button>
+    </div>
+    <div class="row">
+      <div><label>Tanggal</label><input type="number" id="dateInput" min="1" max="31" value="6"></div>
+      <div><label>Bulan</label>
+        <select id="monthInput">
+          <option value="0">01</option><option value="1">02</option><option value="2">03</option>
+          <option value="3">04</option><option value="4">05</option><option value="5">06</option>
+          <option value="6" selected>07</option><option value="7">08</option><option value="8">09</option>
+          <option value="9">10</option><option value="10">11</option><option value="11">12</option>
+        </select>
+      </div>
+      <div><label>Tahun</label><input type="number" id="yearInput" min="2000" max="2100" value="2026"></div>
+    </div>
+    <label>Nama Hari</label>
+    <select id="dayNameInput">
+      <option value="Min">Min</option><option value="Sen">Sen</option><option value="Sel">Sel</option>
+      <option value="Rab">Rab</option><option value="Kam">Kam</option><option value="Jum">Jum</option><option value="Sab">Sab</option>
+    </select>
+    <div class="hint">// otomatis mengikuti tanggal, bisa diganti manual</div>
+  </div>
+
+  <div class="panel">
+    <h2>Lokasi &amp; Koordinat</h2>
+    <label>Nama Lokasi</label>
+    <input type="text" id="locationInput" value="Jl. Ahmad Yani, Pangkalan Banteng, Kotawaringin Barat">
+    <label>Koordinat GPS</label>
+    <input type="text" id="coordInput" value="2.330561°S,111.871620°E">
+    <label>Catatan (Blok &amp; Jalur)</label>
+    <input type="text" id="noteInput" placeholder="Contoh: Blok OH001, Jalur 7-8" value="">
+  </div>
+
+  <div class="panel">
+    <h2>Watermark Bawah</h2>
+    <input type="text" id="brandInput" value="Verified time by Time Mark">
+  </div>
+
+  <div class="panel">
+    <h2>Preview Output</h2>
+    <div id="placeholder" class="placeholder">&gt; MENUNGGU FOTO DIMASUKKAN...</div>
+    <canvas id="previewCanvas" style="display:none;"></canvas>
+    <button class="btn-main" id="downloadBtn" disabled onclick="downloadImage()">[ SIMPAN FOTO ]</button>
+  </div>
+</div>
+
+<script>
+// ===== Matrix rain background =====
+const mcanvas = document.getElementById('matrix');
+const mctx = mcanvas.getContext('2d');
+function resizeMatrix() {
+  mcanvas.width = window.innerWidth;
+  mcanvas.height = window.innerHeight;
+  columns = Math.floor(mcanvas.width / fontSize) || 1;
+  drops = Array(columns).fill(1);
+}
+const chars = 'アカサタナハマヤラワ0123456789ABCDEFｱｲｳｴｵ';
+const fontSize = 16;
+let columns = 1;
+let drops = [1];
+resizeMatrix();
+window.addEventListener('resize', resizeMatrix);
+
+// paint solid black immediately so the canvas is never blank/transparent
+mctx.fillStyle = '#000';
+mctx.fillRect(0, 0, mcanvas.width, mcanvas.height);
+
+let lastFrameTime = 0;
+const frameInterval = 50; // ms, ~20fps is enough and lighter on mobile GPUs
+
+function drawMatrix(timestamp) {
+  requestAnimationFrame(drawMatrix);
+  if (timestamp - lastFrameTime < frameInterval) return;
+  lastFrameTime = timestamp;
+
+  mctx.fillStyle = 'rgba(0,0,0,0.08)';
+  mctx.fillRect(0,0,mcanvas.width,mcanvas.height);
+  mctx.fillStyle = '#0f0';
+  mctx.font = fontSize + 'px monospace';
+  for (let i=0;i<drops.length;i++) {
+    const text = chars[Math.floor(Math.random()*chars.length)];
+    mctx.fillText(text, i*fontSize, drops[i]*fontSize);
+    if (drops[i]*fontSize > mcanvas.height && Math.random() > 0.975) drops[i] = 0;
+    drops[i]++;
+  }
+}
+requestAnimationFrame(drawMatrix);
+
+// status line rotator
+const statuses = [
+  '&gt; SYSTEM READY // WATERMARK MODULE LOADED',
+  '&gt; SCANNING INPUT PHOTO...',
+  '&gt; GPS SYNC: OK',
+  '&gt; TIMESTAMP ENGINE ACTIVE'
+];
+let sIdx = 0;
+setInterval(() => {
+  sIdx = (sIdx+1) % statuses.length;
+  document.getElementById('statusLine').innerHTML = statuses[sIdx];
+}, 3000);
+
+// ===== Watermark logic =====
+let img = new Image();
+let logoImg = new Image();
+let hasImage = false;
+let hasLogo = false;
+const canvas = document.getElementById('previewCanvas');
+const ctx = canvas.getContext('2d');
+const dayNames = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
+
+document.getElementById('photoInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    img.onload = function() {
+      hasImage = true;
+      document.getElementById('placeholder').style.display = 'none';
+      canvas.style.display = 'block';
+      document.getElementById('downloadBtn').disabled = false;
+      canvas.width = img.width;
+      canvas.height = img.height;
+      render();
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+document.getElementById('logoInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    logoImg.onload = function() { hasLogo = true; render(); };
+    logoImg.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function pad2(n) { return n.toString().padStart(2,'0'); }
+
+function updateDayNameAuto() {
+  const y = parseInt(document.getElementById('yearInput').value);
+  const m = parseInt(document.getElementById('monthInput').value);
+  const d = parseInt(document.getElementById('dateInput').value);
+  if (!isNaN(y) && !isNaN(m) && !isNaN(d) && d>=1 && d<=31) {
+    const dt = new Date(y,m,d);
+    document.getElementById('dayNameInput').value = dayNames[dt.getDay()];
+  }
+}
+
+function setNow() {
+  const now = new Date();
+  document.getElementById('dateInput').value = now.getDate();
+  document.getElementById('monthInput').value = now.getMonth();
+  document.getElementById('yearInput').value = now.getFullYear();
+  document.getElementById('timeInput').value = pad2(now.getHours())+':'+pad2(now.getMinutes());
+  updateDayNameAuto();
+  render();
+}
+
+function shiftDay(delta) {
+  const y = parseInt(document.getElementById('yearInput').value);
+  const m = parseInt(document.getElementById('monthInput').value);
+  const d = parseInt(document.getElementById('dateInput').value);
+  const dt = new Date(y,m,d);
+  dt.setDate(dt.getDate()+delta);
+  document.getElementById('dateInput').value = dt.getDate();
+  document.getElementById('monthInput').value = dt.getMonth();
+  document.getElementById('yearInput').value = dt.getFullYear();
+  updateDayNameAuto();
+  render();
+}
+
+function roundRect(c,x,y,w,h,r) {
+  c.beginPath();
+  c.moveTo(x+r,y);
+  c.arcTo(x+w,y,x+w,y+h,r);
+  c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r);
+  c.arcTo(x,y,x+w,y,r);
+  c.closePath();
+}
+
+function wrapText(c, text, maxWidth) {
+  const words = text.split(' ');
+  const lines = [];
+  let current = '';
+  for (const w of words) {
+    const test = current ? current+' '+w : w;
+    if (c.measureText(test).width > maxWidth && current) { lines.push(current); current = w; }
+    else current = test;
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function render() {
+  if (!hasImage) return;
+  ctx.drawImage(img,0,0,canvas.width,canvas.height);
+  const W = canvas.width, H = canvas.height;
+  const scale = W/1000;
+
+  if (hasLogo) {
+    const logoSize = 90*scale, pad = 24*scale;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    roundRect(ctx, pad, pad, logoSize, logoSize, 10*scale);
+    ctx.fill();
+    ctx.drawImage(logoImg, pad+6*scale, pad+6*scale, logoSize-12*scale, logoSize-12*scale);
+    ctx.restore();
+  }
+
+  const d = pad2(document.getElementById('dateInput').value);
+  const mIdx = parseInt(document.getElementById('monthInput').value)+1;
+  const y = document.getElementById('yearInput').value;
+  const dayName = document.getElementById('dayNameInput').value;
+  const dateStr = `${dayName}, ${d}/${pad2(mIdx)}/${y}`;
+  const timeStr = document.getElementById('timeInput').value;
+  const badgeLabel = document.getElementById('badgeLabel').value;
+  const location = document.getElementById('locationInput').value;
+  const coord = document.getElementById('coordInput').value;
+  const note = document.getElementById('noteInput').value.trim();
+  const brand = document.getElementById('brandInput').value;
+
+  const baseFont = 34*scale;
+  const leftMargin = 24*scale;
+  let currentY = H - 30*scale;
+
+  ctx.font = `${22*scale}px Arial`;
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.textAlign = 'left';
+  ctx.fillText(brand, leftMargin+30*scale, currentY);
+  ctx.beginPath();
+  ctx.arc(leftMargin+12*scale, currentY-8*scale, 10*scale, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.lineWidth = 2*scale;
+  ctx.stroke();
+
+  currentY -= 46*scale;
+  const noteHeight = note ? baseFont*0.95 : 0;
+  const blockTop = currentY - (baseFont*3.2) - noteHeight;
+  ctx.fillStyle = '#ffcc00';
+  ctx.fillRect(leftMargin-14*scale, blockTop, 5*scale, currentY-blockTop+10*scale);
+
+  ctx.font = `bold ${baseFont*0.85}px Arial`;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(coord, leftMargin, currentY);
+  currentY -= baseFont*1.15;
+
+  if (note) {
+    ctx.font = `italic ${baseFont*0.6}px Arial`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText(note, leftMargin, currentY);
+    currentY -= baseFont*0.95;
+  }
+
+  ctx.font = `${baseFont*0.75}px Arial`;
+  ctx.fillStyle = '#ffffff';
+  const maxWidth = W - leftMargin*2 - 20*scale;
+  const locLines = wrapText(ctx, location, maxWidth);
+  for (let i=locLines.length-1;i>=0;i--) { ctx.fillText(locLines[i], leftMargin, currentY); currentY -= baseFont*1.05; }
+
+  ctx.font = `bold ${baseFont*0.85}px Arial`;
+  ctx.fillText(dateStr, leftMargin, currentY);
+  currentY -= baseFont*1.5;
+
+  ctx.font = `bold ${baseFont*1.15}px Arial`;
+  const labelWidth = ctx.measureText(badgeLabel).width;
+  ctx.font = `bold ${baseFont*1.3}px Arial`;
+  const timeWidth = ctx.measureText(timeStr).width;
+
+  const padX = 22*scale;
+  const gap = 18*scale;
+  const badgeHeight = baseFont*1.7;
+  const pillWidth = padX + labelWidth + gap + timeWidth + padX;
+  const badgeY = currentY - badgeHeight + 14*scale;
+  const pillRadius = badgeHeight/2;
+
+  // Outer pill (white/light) with soft shadow
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.35)';
+  ctx.shadowBlur = 10*scale;
+  ctx.shadowOffsetY = 3*scale;
+  ctx.fillStyle = '#f2f2f2';
+  roundRect(ctx, leftMargin, badgeY, pillWidth, badgeHeight, pillRadius);
+  ctx.fill();
+  ctx.restore();
+
+  // Clip to pill shape for inner fills + texture
+  ctx.save();
+  roundRect(ctx, leftMargin, badgeY, pillWidth, badgeHeight, pillRadius);
+  ctx.clip();
+
+  // Yellow left section (label area, extends a bit past text into the gap)
+  const yellowWidth = padX + labelWidth + gap*0.55;
+  ctx.fillStyle = '#ffc22e';
+  ctx.fillRect(leftMargin, badgeY, yellowWidth, badgeHeight);
+
+  // Subtle diagonal stripe texture across whole pill
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 2.5*scale;
+  const stripeGap = 14*scale;
+  for (let sx = -badgeHeight; sx < pillWidth + badgeHeight; sx += stripeGap) {
+    ctx.beginPath();
+    ctx.moveTo(leftMargin + sx, badgeY + badgeHeight);
+    ctx.lineTo(leftMargin + sx + badgeHeight, badgeY);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Label text (black, bold)
+  ctx.font = `bold ${baseFont*1.15}px Arial`;
+  ctx.fillStyle = '#111111';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(badgeLabel, leftMargin + padX, badgeY + badgeHeight/2 + 2*scale);
+
+  // Time text (dark navy, bold, larger)
+  ctx.font = `bold ${baseFont*1.3}px Arial`;
+  ctx.fillStyle = '#0b1f4d';
+  ctx.fillText(timeStr, leftMargin + padX + labelWidth + gap, badgeY + badgeHeight/2 + 2*scale);
+  ctx.textBaseline = 'alphabetic';
+}
+
+function downloadImage() {
+  const link = document.createElement('a');
+  link.download = 'watermark_apel_pagi_' + Date.now() + '.jpg';
+  link.href = canvas.toDataURL('image/jpeg', 0.92);
+  link.click();
+}
+
+['dateInput','monthInput','yearInput','timeInput','dayNameInput','badgeLabel','locationInput','coordInput','noteInput','brandInput'].forEach(id => {
+  document.getElementById(id).addEventListener('input', function() {
+    if (['dateInput','monthInput','yearInput'].includes(id)) updateDayNameAuto();
+    render();
+  });
+});
+
+updateDayNameAuto();
+</script>
+</body>
+</html>
